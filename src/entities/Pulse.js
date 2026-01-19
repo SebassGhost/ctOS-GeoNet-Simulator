@@ -1,35 +1,31 @@
 // src/entities/Pulse.js
 
 export default class Pulse {
-  constructor(link, speed = 0.002) {
+  constructor(link) {
     this.link = link;
-    this.progress = Math.random(); // para que no todos salgan a la vez
-    this.speed = speed;
+    this.t = Math.random();
+    this.speed = 0.4 + Math.random() * 0.4;
   }
 
-  update() {
-    this.progress += this.speed;
-    if (this.progress > 1) this.progress = 0;
+  update(dt) {
+    this.t += dt * this.speed;
+    if (this.t > 1) this.t = 0;
   }
 
   draw(ctx, map) {
-    const p1 = map.latLngToContainerPoint([
-      this.link.from.lat,
-      this.link.from.lng
-    ]);
+    const a = map.latLngToContainerPoint([this.link.from.lat, this.link.from.lng]);
+    const b = map.latLngToContainerPoint([this.link.to.lat, this.link.to.lng]);
 
-    const p2 = map.latLngToContainerPoint([
-      this.link.to.lat,
-      this.link.to.lng
-    ]);
+    const x = a.x + (b.x - a.x) * this.t;
+    const y = a.y + (b.y - a.y) * this.t;
 
-    const x = p1.x + (p2.x - p1.x) * this.progress;
-    const y = p1.y + (p2.y - p1.y) * this.progress;
-
+    ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, 2.5, 0, Math.PI * 2);
     ctx.fillStyle = "#00ffcc";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00ffcc";
     ctx.fill();
+    ctx.restore();
   }
 }
-
