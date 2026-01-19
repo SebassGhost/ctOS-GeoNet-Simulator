@@ -2,6 +2,7 @@
 
 import Node from "../entities/Node.js";
 import Link from "../entities/Link.js";
+import Pulse from "../entities/Pulse.js";
 
 /* ===============================
    MAP SETUP
@@ -35,6 +36,7 @@ resizeCanvas();
 ================================ */
 let nodes = [];
 let links = [];
+let pulses = [];
 const nodeMap = new Map();
 
 async function loadData() {
@@ -58,6 +60,9 @@ async function loadData() {
       return new Link(from, to);
     })
     .filter(Boolean);
+
+  // Crear pulsos (1 por link)
+  pulses = links.map(link => new Pulse(link));
 }
 
 loadData();
@@ -68,10 +73,13 @@ loadData();
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1️⃣ Links primero (debajo)
   links.forEach(link => link.draw(ctx, map));
 
-  // 2️⃣ Nodes encima
+  pulses.forEach(pulse => {
+    pulse.update();
+    pulse.draw(ctx, map);
+  });
+
   nodes.forEach(node => node.draw(ctx, map));
 
   requestAnimationFrame(render);
