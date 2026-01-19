@@ -61,7 +61,6 @@ async function loadData() {
     })
     .filter(Boolean);
 
-  // Crear pulsos (1 por link)
   pulses = links.map(link => new Pulse(link));
 }
 
@@ -70,17 +69,17 @@ loadData();
 /* ===============================
    RENDER LOOP
 ================================ */
-function render() {
+function render(time = performance.now()) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  links.forEach(link => link.draw(ctx, map));
+  links.forEach(link => link.draw(ctx, map, time));
 
   pulses.forEach(pulse => {
     pulse.update();
     pulse.draw(ctx, map);
   });
 
-  nodes.forEach(node => node.draw(ctx, map));
+  nodes.forEach(node => node.draw(ctx, map, time));
 
   requestAnimationFrame(render);
 }
