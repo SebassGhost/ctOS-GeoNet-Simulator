@@ -8,7 +8,7 @@ import Node from "../entities/Node.js";
 const map = L.map("map", {
   zoomControl: false,
   attributionControl: false
-}).setView([40.7128, -74.0060], 11);
+}).setView([40.7128, -74.0060], 12);
 
 L.tileLayer(
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
@@ -30,15 +30,18 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 /* ===============================
-   ENTITIES
+   LOAD NODES
 ================================ */
-const ctosNode = new Node({
-  id: "ctos-core",
-  lat: 40.7128,
-  lng: -74.0060,
-  type: "ctos",
-  status: "normal"
-});
+let nodes = [];
+
+async function loadNodes() {
+  const response = await fetch("src/data/nodes.json");
+  const data = await response.json();
+
+  nodes = data.map(nodeData => new Node(nodeData));
+}
+
+loadNodes();
 
 /* ===============================
    RENDER LOOP
@@ -46,7 +49,7 @@ const ctosNode = new Node({
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctosNode.draw(ctx, map);
+  nodes.forEach(node => node.draw(ctx, map));
 
   requestAnimationFrame(render);
 }
