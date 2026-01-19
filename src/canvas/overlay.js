@@ -1,11 +1,26 @@
 // src/canvas/overlay.js
 
+import Node from "../entities/Node.js";
+
+/* ===============================
+   MAP SETUP
+================================ */
+const map = L.map("map", {
+  zoomControl: false,
+  attributionControl: false
+}).setView([40.7128, -74.0060], 11);
+
+L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  { maxZoom: 19 }
+).addTo(map);
+
+/* ===============================
+   CANVAS SETUP
+================================ */
 const canvas = document.getElementById("ctos-canvas");
 const ctx = canvas.getContext("2d");
 
-/* ===============================
-   CANVAS SIZE
-================================ */
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -15,29 +30,15 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 /* ===============================
-   COORDINATE CONVERSION
+   ENTITIES
 ================================ */
-function latLngToCanvas(lat, lng) {
-  const point = map.latLngToContainerPoint([lat, lng]);
-  return { x: point.x, y: point.y };
-}
-
-/* ===============================
-   TEST NODE (TEMPORAL)
-================================ */
-const testNode = {
+const ctosNode = new Node({
+  id: "ctos-core",
   lat: 40.7128,
-  lng: -74.0060
-};
-
-function drawTestNode() {
-  const pos = latLngToCanvas(testNode.lat, testNode.lng);
-
-  ctx.beginPath();
-  ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
-  ctx.fillStyle = "#00ffcc";
-  ctx.fill();
-}
+  lng: -74.0060,
+  type: "ctos",
+  status: "normal"
+});
 
 /* ===============================
    RENDER LOOP
@@ -45,16 +46,9 @@ function drawTestNode() {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawTestNode();
+  ctosNode.draw(ctx, map);
 
   requestAnimationFrame(render);
 }
 
 render();
-
-/* ===============================
-   MAP EVENTS SYNC
-================================ */
-map.on("move", () => {});
-map.on("zoom", () => {});
-
