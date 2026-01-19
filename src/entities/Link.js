@@ -14,10 +14,9 @@ export default class Link {
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
 
-    ctx.strokeStyle = "rgba(0, 255, 204, 0.35)";
+    ctx.strokeStyle = "rgba(0, 255, 204, 0.25)";
     ctx.lineWidth = 1;
 
     ctx.stroke();
   }
 }
-
