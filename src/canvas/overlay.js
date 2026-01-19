@@ -2,23 +2,26 @@
 // ctOS GeoNet Simulator – Overlay
 // ===============================
 
-import L from "https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js";
+import Node from "../entities/Node.js";
+import Link from "../entities/Link.js";
+import Pulse from "../entities/Pulse.js";
 
-// --------------------
-// MAP SETUP
-// --------------------
+/* ===============================
+   MAP
+================================ */
 const map = L.map("map", {
   zoomControl: false,
   attributionControl: false
-}).setView([20, 0], 2);
+}).setView([40.7128, -74.0060], 12);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19
-}).addTo(map);
+L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  { maxZoom: 19 }
+).addTo(map);
 
-// --------------------
-// CANVAS SETUP
-// --------------------
+/* ===============================
+   CANVAS
+================================ */
 const canvas = document.getElementById("ctos-canvas");
 const ctx = canvas.getContext("2d");
 
@@ -26,73 +29,63 @@ function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
-resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
-// --------------------
-// NODE MODEL
-// --------------------
-const nodes = [];
-const NODE_COUNT = 40;
+/* ===============================
+   MOUSE
+================================ */
+const mouse = { x: 0, y: 0 };
 
-const STATUS_COLORS = {
-  normal: "#00ffcc",
-  alert: "#ffaa00",
-  compromised: "#ff3333",
-  offline: "#555555"
-};
-
-function randomLatLng() {
-  return [
-    Math.random() * 140 - 70,
-    Math.random() * 360 - 180
-  ];
-}
-
-for (let i = 0; i < NODE_COUNT; i++) {
-  nodes.push({
-    latlng: randomLatLng(),
-    status: "normal",
-    pulse: Math.random() * Math.PI * 2
-  });
-}
-
-// --------------------
-// HOVER DETECTION
-// --------------------
-let hoveredNode = null;
-
-map.getContainer().addEventListener("mousemove", e => {
-  hoveredNode = null;
+canvas.addEventListener("mousemove", e => {
   const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-
-  for (const node of nodes) {
-    const point = map.latLngToContainerPoint(node.latlng);
-    const dx = mx - point.x;
-    const dy = my - point.y;
-
-    if (Math.sqrt(dx * dx + dy * dy) < 10) {
-      hoveredNode = node;
-      break;
-    }
-  }
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
 });
 
-// --------------------
-// CLICK INTERACTION (OPTION 1)
-// --------------------
-map.getContainer().addEventListener("click", e => {
+/* ===============================
+   DATA
+================================ */
+let nodes = [];
+let links = [];
+let pulses = [];
+let hoveredNode = null;
+
+const nodeMap = new Map();
+
+async function loadData() {
+  const nodeData = await (await fetch("src/data/nodes.json")).json();
+
+  nodes = nodeData.map(n => {
+    const node = new Node({
+      ...n,
+      status: "normal" // estado inicial FORZADO
+    });
+    nodeMap.set(n.id, node);
+    return node;
+  });
+
+  const linkData = await (await fetch("src/data/links.json")).json();
+
+  links = linkData
+    .map(l => {
+      const from = nodeMap.get(l.from);
+      const to = nodeMap.get(l.to);
+      return from && to ? new Link(from, to) : null;
+    })
+    .filter(Boolean);
+
+  pulses = links.map(link => new Pulse(link));
+}
+
+loadData();
+
+/* ===============================
+   CLICK = INTERVENCIÓN
+================================ */
+canvas.addEventListener("click", () => {
   if (!hoveredNode) return;
 
-  // 🔧 REPAIR MODE (Shift + Click)
-  if (e.shiftKey && hoveredNode.status === "offline") {
-    hoveredNode.status = "normal";
-    return;
-  }
-
-  // 🔥 HACK MODE
   switch (hoveredNode.status) {
     case "normal":
       hoveredNode.status = "alert";
@@ -103,38 +96,72 @@ map.getContainer().addEventListener("click", e => {
     case "compromised":
       hoveredNode.status = "offline";
       break;
+    case "offline":
+      hoveredNode.status = "normal";
+      break;
   }
 });
 
-// --------------------
-// DRAW LOOP
-// --------------------
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+/* ===============================
+   HUD
+================================ */
+function drawHackPanel(ctx, node, x, y) {
+  const w = 190;
+  const h = 90;
 
-  for (const node of nodes) {
-    const point = map.latLngToContainerPoint(node.latlng);
-    node.pulse += 0.05;
+  ctx.save();
+  ctx.fillStyle = "rgba(10,20,25,0.85)";
+  ctx.strokeStyle = "#00ffcc";
+  ctx.lineWidth = 1;
 
-    const radius =
-      node.status === "offline"
-        ? 4
-        : 4 + Math.sin(node.pulse) * 1.5;
+  ctx.beginPath();
+  ctx.rect(x + 15, y - h / 2, w, h);
+  ctx.fill();
+  ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = STATUS_COLORS[node.status];
-    ctx.fill();
-  }
+  ctx.fillStyle = "#00ffcc";
+  ctx.font = "12px monospace";
+  ctx.fillText(`ID: ${node.id}`, x + 25, y - 20);
+  ctx.fillText(`TYPE: ${node.type}`, x + 25, y - 4);
+  ctx.fillText(`STATUS: ${node.status}`, x + 25, y + 12);
 
-  requestAnimationFrame(draw);
+  ctx.restore();
 }
 
-draw();
-
-// --------------------
-// MAP MOVE SYNC
-// --------------------
-map.on("move", () => {
+/* ===============================
+   RENDER LOOP (CRÍTICO)
+================================ */
+function render(time = performance.now()) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-});
+
+  hoveredNode = null;
+
+  // LINKS
+  links.forEach(link => link.draw(ctx, map, time));
+
+  // PULSES
+  pulses.forEach(p => {
+    p.update();
+    p.draw(ctx, map);
+  });
+
+  // NODES
+  nodes.forEach(node => {
+    const isHover = node.isHovered(mouse, map);
+    if (isHover) hoveredNode = node;
+    node.draw(ctx, map, time, isHover);
+  });
+
+  // HUD
+  if (hoveredNode) {
+    const p = map.latLngToContainerPoint([
+      hoveredNode.lat,
+      hoveredNode.lng
+    ]);
+    drawHackPanel(ctx, hoveredNode, p.x, p.y);
+  }
+
+  requestAnimationFrame(render);
+}
+
+render();
