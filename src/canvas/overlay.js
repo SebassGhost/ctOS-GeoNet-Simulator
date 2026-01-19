@@ -2,26 +2,23 @@
 // ctOS GeoNet Simulator – Overlay
 // ===============================
 
-import Node from "../entities/Node.js";
-import Link from "../entities/Link.js";
-import Pulse from "../entities/Pulse.js";
+import L from "https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js";
 
-/* ===============================
-   MAP SETUP
-================================ */
+// --------------------
+// MAP SETUP
+// --------------------
 const map = L.map("map", {
   zoomControl: false,
   attributionControl: false
-}).setView([40.7128, -74.0060], 12);
+}).setView([20, 0], 2);
 
-L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  { maxZoom: 19 }
-).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19
+}).addTo(map);
 
-/* ===============================
-   CANVAS
-================================ */
+// --------------------
+// CANVAS SETUP
+// --------------------
 const canvas = document.getElementById("ctos-canvas");
 const ctx = canvas.getContext("2d");
 
@@ -29,65 +26,73 @@ function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
-window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
-/* ===============================
-   MOUSE
-================================ */
-const mouse = { x: 0, y: 0 };
+// --------------------
+// NODE MODEL
+// --------------------
+const nodes = [];
+const NODE_COUNT = 40;
 
-map.getContainer().addEventListener("mousemove", e => {
-  const rect = canvas.getBoundingClientRect();
-  mouse.x = e.clientX - rect.left;
-  mouse.y = e.clientY - rect.top;
-});
+const STATUS_COLORS = {
+  normal: "#00ffcc",
+  alert: "#ffaa00",
+  compromised: "#ff3333",
+  offline: "#555555"
+};
 
-/* ===============================
-   DATA
-================================ */
-let nodes = [];
-let links = [];
-let pulses = [];
+function randomLatLng() {
+  return [
+    Math.random() * 140 - 70,
+    Math.random() * 360 - 180
+  ];
+}
+
+for (let i = 0; i < NODE_COUNT; i++) {
+  nodes.push({
+    latlng: randomLatLng(),
+    status: "normal",
+    pulse: Math.random() * Math.PI * 2
+  });
+}
+
+// --------------------
+// HOVER DETECTION
+// --------------------
 let hoveredNode = null;
 
-const nodeMap = new Map();
+map.getContainer().addEventListener("mousemove", e => {
+  hoveredNode = null;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
 
-/* ===============================
-   LOAD DATA
-================================ */
-async function loadData() {
-  const nodeData = await (await fetch("src/data/nodes.json")).json();
+  for (const node of nodes) {
+    const point = map.latLngToContainerPoint(node.latlng);
+    const dx = mx - point.x;
+    const dy = my - point.y;
 
-  nodes = nodeData.map(n => {
-    const node = new Node({
-      ...n,
-      status: n.status || "normal"
-    });
-    nodeMap.set(n.id, node);
-    return node;
-  });
+    if (Math.sqrt(dx * dx + dy * dy) < 10) {
+      hoveredNode = node;
+      break;
+    }
+  }
+});
 
-  const linkData = await (await fetch("src/data/links.json")).json();
-
-  links = linkData
-    .map(l => {
-      const from = nodeMap.get(l.from);
-      const to = nodeMap.get(l.to);
-      return from && to ? new Link(from, to) : null;
-    })
-    .filter(Boolean);
-
-  pulses = links.map(link => new Pulse(link));
-}
-loadData();
-
-/* ===============================
-   CLICK → MANUAL HACK
-================================ */
-map.getContainer().addEventListener("click", () => {
+// --------------------
+// CLICK INTERACTION (OPTION 1)
+// --------------------
+map.getContainer().addEventListener("click", e => {
   if (!hoveredNode) return;
 
+  // 🔧 REPAIR MODE (Shift + Click)
+  if (e.shiftKey && hoveredNode.status === "offline") {
+    hoveredNode.status = "normal";
+    return;
+  }
+
+  // 🔥 HACK MODE
   switch (hoveredNode.status) {
     case "normal":
       hoveredNode.status = "alert";
@@ -98,95 +103,38 @@ map.getContainer().addEventListener("click", () => {
     case "compromised":
       hoveredNode.status = "offline";
       break;
-    case "offline":
-      // se queda offline
-      break;
   }
 });
 
-/* ===============================
-   VERY RARE EVENTS (OPTIONAL)
-================================ */
-let rareEventTimer = 0;
-
-function updateRareEvents(dt) {
-  rareEventTimer += dt;
-
-  // evento MUY raro (cada ~60s)
-  if (rareEventTimer > 60 && nodes.length > 0) {
-    const node = nodes[Math.floor(Math.random() * nodes.length)];
-
-    if (node.status === "normal") {
-      node.status = "alert";
-    }
-
-    rareEventTimer = 0;
-  }
-}
-
-/* ===============================
-   HUD
-================================ */
-function drawHackPanel(ctx, node, x, y) {
-  const w = 200;
-  const h = 110;
-
-  ctx.save();
-  ctx.fillStyle = "rgba(8,16,20,0.9)";
-  ctx.strokeStyle = "#00ffcc";
-  ctx.lineWidth = 1;
-
-  ctx.beginPath();
-  ctx.rect(x + 18, y - h / 2, w, h);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "#00ffcc";
-  ctx.font = "12px monospace";
-  ctx.fillText(`ID: ${node.id}`, x + 28, y - 26);
-  ctx.fillText(`TYPE: ${node.type}`, x + 28, y - 10);
-  ctx.fillText(`STATUS: ${node.status}`, x + 28, y + 6);
-  ctx.fillText(`ACTION: CLICK TO HACK`, x + 28, y + 26);
-
-  ctx.restore();
-}
-
-/* ===============================
-   RENDER LOOP
-================================ */
-let lastTime = 0;
-
-function render(time) {
-  const dt = (time - lastTime) * 0.001;
-  lastTime = time;
-
+// --------------------
+// DRAW LOOP
+// --------------------
+function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  hoveredNode = null;
 
-  updateRareEvents(dt);
+  for (const node of nodes) {
+    const point = map.latLngToContainerPoint(node.latlng);
+    node.pulse += 0.05;
 
-  links.forEach(link => link.draw(ctx, map, time));
+    const radius =
+      node.status === "offline"
+        ? 4
+        : 4 + Math.sin(node.pulse) * 1.5;
 
-  pulses.forEach(p => {
-    p.update(dt);
-    p.draw(ctx, map);
-  });
-
-  nodes.forEach(node => {
-    const hover = node.isHovered(mouse, map);
-    if (hover) hoveredNode = node;
-    node.draw(ctx, map, time, hover);
-  });
-
-  if (hoveredNode) {
-    const p = map.latLngToContainerPoint([
-      hoveredNode.lat,
-      hoveredNode.lng
-    ]);
-    drawHackPanel(ctx, hoveredNode, p.x, p.y);
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = STATUS_COLORS[node.status];
+    ctx.fill();
   }
 
-  requestAnimationFrame(render);
+  requestAnimationFrame(draw);
 }
 
-requestAnimationFrame(render);
+draw();
+
+// --------------------
+// MAP MOVE SYNC
+// --------------------
+map.on("move", () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
