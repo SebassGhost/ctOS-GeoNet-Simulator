@@ -1,6 +1,7 @@
 // ===============================
 // ctOS GeoNet Simulator – Overlay
 // ===============================
+
 import Node from "../entities/Node.js";
 import Link from "../entities/Link.js";
 import Pulse from "../entities/Pulse.js";
@@ -32,7 +33,7 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 /* ===============================
-   MOUSE (desde el MAPA)
+   MOUSE (desde el mapa)
 ================================ */
 const mouse = { x: 0, y: 0 };
 
@@ -49,17 +50,26 @@ let nodes = [];
 let links = [];
 let pulses = [];
 let hoveredNode = null;
+
 const nodeMap = new Map();
 
+/* ===============================
+   LOAD DATA
+================================ */
 async function loadData() {
   const nodeData = await (await fetch("src/data/nodes.json")).json();
+
   nodes = nodeData.map(n => {
-    const node = new Node(n);
+    const node = new Node({
+      ...n,
+      status: n.status || "normal"
+    });
     nodeMap.set(n.id, node);
     return node;
   });
 
   const linkData = await (await fetch("src/data/links.json")).json();
+
   links = linkData
     .map(l => {
       const from = nodeMap.get(l.from);
@@ -76,29 +86,49 @@ loadData();
    HUD
 ================================ */
 function drawHackPanel(ctx, node, x, y) {
-  const w = 180;
-  const h = 90;
+  const w = 190;
+  const h = 100;
 
   ctx.save();
-  ctx.fillStyle = "rgba(10,20,25,0.85)";
+  ctx.fillStyle = "rgba(8,16,20,0.9)";
   ctx.strokeStyle = "#00ffcc";
   ctx.lineWidth = 1;
 
   ctx.beginPath();
-  ctx.rect(x + 14, y - h / 2, w, h);
+  ctx.rect(x + 16, y - h / 2, w, h);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "#00ffcc";
   ctx.font = "12px monospace";
-  ctx.fillText(`ID: ${node.id}`, x + 22, y - 20);
-  ctx.fillText(`TYPE: ${node.type}`, x + 22, y - 4);
-  ctx.fillText(`STATUS: ${node.status}`, x + 22, y + 12);
+  ctx.fillText(`ID: ${node.id}`, x + 26, y - 24);
+  ctx.fillText(`TYPE: ${node.type}`, x + 26, y - 8);
+  ctx.fillText(`STATUS: ${node.status}`, x + 26, y + 8);
+
   ctx.restore();
 }
 
 /* ===============================
-   RENDER LOOP (CORRECTO)
+   SIMULATED EVENTS (ctOS)
+================================ */
+let eventTimer = 0;
+
+function updateEvents(dt) {
+  eventTimer += dt;
+
+  if (eventTimer > 6 && nodes.length > 0) {
+    const node = nodes[Math.floor(Math.random() * nodes.length)];
+
+    if (node.status === "normal") node.status = "alert";
+    else if (node.status === "alert") node.status = "compromised";
+    else node.status = "normal";
+
+    eventTimer = 0;
+  }
+}
+
+/* ===============================
+   RENDER LOOP
 ================================ */
 let lastTime = 0;
 
@@ -108,6 +138,8 @@ function render(time) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   hoveredNode = null;
+
+  updateEvents(dt);
 
   links.forEach(link => link.draw(ctx, map, time));
 
