@@ -1,6 +1,7 @@
 // src/canvas/overlay.js
 
 import Node from "../entities/Node.js";
+import Link from "../entities/Link.js";
 
 /* ===============================
    MAP SETUP
@@ -30,18 +31,36 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 /* ===============================
-   LOAD NODES
+   LOAD DATA
 ================================ */
 let nodes = [];
+let links = [];
+const nodeMap = new Map();
 
-async function loadNodes() {
-  const response = await fetch("src/data/nodes.json");
-  const data = await response.json();
+async function loadData() {
+  const nodeRes = await fetch("src/data/nodes.json");
+  const nodeData = await nodeRes.json();
 
-  nodes = data.map(nodeData => new Node(nodeData));
+  nodes = nodeData.map(n => {
+    const node = new Node(n);
+    nodeMap.set(n.id, node);
+    return node;
+  });
+
+  const linkRes = await fetch("src/data/links.json");
+  const linkData = await linkRes.json();
+
+  links = linkData
+    .map(l => {
+      const from = nodeMap.get(l.from);
+      const to = nodeMap.get(l.to);
+      if (!from || !to) return null;
+      return new Link(from, to);
+    })
+    .filter(Boolean);
 }
 
-loadNodes();
+loadData();
 
 /* ===============================
    RENDER LOOP
@@ -49,6 +68,10 @@ loadNodes();
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // 1️⃣ Links primero (debajo)
+  links.forEach(link => link.draw(ctx, map));
+
+  // 2️⃣ Nodes encima
   nodes.forEach(node => node.draw(ctx, map));
 
   requestAnimationFrame(render);
