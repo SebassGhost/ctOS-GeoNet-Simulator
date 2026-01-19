@@ -1,7 +1,7 @@
 // src/entities/Node.js
 
 export default class Node {
-  constructor({ id, lat, lng, type = "device", status = "normal" }) {
+  constructor({ id, lat, lng, type, status }) {
     this.id = id;
     this.lat = lat;
     this.lng = lng;
@@ -12,7 +12,10 @@ export default class Node {
   draw(ctx, map) {
     const point = map.latLngToContainerPoint([this.lat, this.lng]);
 
-    const radius = this.type === "ctos" ? 12 : 5;
+    const radius =
+      this.type === "ctos" ? 12 :
+      this.type === "camera" ? 6 :
+      5;
 
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
