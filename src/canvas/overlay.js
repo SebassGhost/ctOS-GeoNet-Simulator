@@ -33,11 +33,13 @@ resizeCanvas();
 /* ===============================
    MOUSE
 ================================ */
-const mouse = { x: 0, y: 0 };
 canvas.addEventListener("mousemove", e => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
+  const rect = canvas.getBoundingClientRect();
+
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
 });
+
 
 /* ===============================
    DATA
