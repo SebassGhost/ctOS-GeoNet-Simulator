@@ -1,0 +1,6 @@
+[
+  { "from": "traffic-cam-01", "to": "ctos-core" },
+  { "from": "phone-8791", "to": "router-77A" },
+  { "from": "router-77A", "to": "ctos-core" },
+  { "from": "atm-332", "to": "ctos-core" }
+]
