@@ -35,7 +35,7 @@ El objetivo es convertir información abstracta en una experiencia visual clara,
 - HTML5  
 - JavaScript (ES6+)  
 - Canvas / WebGL (por definir)  
-- Librería de mapas (por definir)
+- Librería de mapas: Leaflet.js
 
 ---
 
