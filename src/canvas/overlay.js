@@ -7,7 +7,7 @@ import Link from "../entities/Link.js";
 import Pulse from "../entities/Pulse.js";
 
 /* ===============================
-   MAP
+   MAP SETUP
 ================================ */
 const map = L.map("map", {
   zoomControl: false,
@@ -33,12 +33,12 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 /* ===============================
-   MOUSE
+   MOUSE (🔥 DESDE EL MAPA)
 ================================ */
 const mouse = { x: 0, y: 0 };
 
-canvas.addEventListener("mousemove", e => {
-  const rect = canvas.getBoundingClientRect();
+map.getContainer().addEventListener("mousemove", e => {
+  const rect = map.getContainer().getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
   mouse.y = e.clientY - rect.top;
 });
@@ -59,7 +59,7 @@ async function loadData() {
   nodes = nodeData.map(n => {
     const node = new Node({
       ...n,
-      status: "normal" // estado inicial FORZADO
+      status: "normal" // estado inicial controlado
     });
     nodeMap.set(n.id, node);
     return node;
@@ -81,9 +81,9 @@ async function loadData() {
 loadData();
 
 /* ===============================
-   CLICK = INTERVENCIÓN
+   CLICK = INTERVENCIÓN MANUAL
 ================================ */
-canvas.addEventListener("click", () => {
+map.getContainer().addEventListener("click", () => {
   if (!hoveredNode) return;
 
   switch (hoveredNode.status) {
@@ -129,7 +129,7 @@ function drawHackPanel(ctx, node, x, y) {
 }
 
 /* ===============================
-   RENDER LOOP (CRÍTICO)
+   RENDER LOOP (NO SE TOCA)
 ================================ */
 function render(time = performance.now()) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
