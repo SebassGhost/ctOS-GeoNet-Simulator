@@ -33,7 +33,7 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 /* ===============================
-   MOUSE (desde el mapa)
+   MOUSE
 ================================ */
 const mouse = { x: 0, y: 0 };
 
@@ -83,11 +83,53 @@ async function loadData() {
 loadData();
 
 /* ===============================
+   CLICK → MANUAL HACK
+================================ */
+map.getContainer().addEventListener("click", () => {
+  if (!hoveredNode) return;
+
+  switch (hoveredNode.status) {
+    case "normal":
+      hoveredNode.status = "alert";
+      break;
+    case "alert":
+      hoveredNode.status = "compromised";
+      break;
+    case "compromised":
+      hoveredNode.status = "offline";
+      break;
+    case "offline":
+      // se queda offline
+      break;
+  }
+});
+
+/* ===============================
+   VERY RARE EVENTS (OPTIONAL)
+================================ */
+let rareEventTimer = 0;
+
+function updateRareEvents(dt) {
+  rareEventTimer += dt;
+
+  // evento MUY raro (cada ~60s)
+  if (rareEventTimer > 60 && nodes.length > 0) {
+    const node = nodes[Math.floor(Math.random() * nodes.length)];
+
+    if (node.status === "normal") {
+      node.status = "alert";
+    }
+
+    rareEventTimer = 0;
+  }
+}
+
+/* ===============================
    HUD
 ================================ */
 function drawHackPanel(ctx, node, x, y) {
-  const w = 190;
-  const h = 100;
+  const w = 200;
+  const h = 110;
 
   ctx.save();
   ctx.fillStyle = "rgba(8,16,20,0.9)";
@@ -95,36 +137,18 @@ function drawHackPanel(ctx, node, x, y) {
   ctx.lineWidth = 1;
 
   ctx.beginPath();
-  ctx.rect(x + 16, y - h / 2, w, h);
+  ctx.rect(x + 18, y - h / 2, w, h);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "#00ffcc";
   ctx.font = "12px monospace";
-  ctx.fillText(`ID: ${node.id}`, x + 26, y - 24);
-  ctx.fillText(`TYPE: ${node.type}`, x + 26, y - 8);
-  ctx.fillText(`STATUS: ${node.status}`, x + 26, y + 8);
+  ctx.fillText(`ID: ${node.id}`, x + 28, y - 26);
+  ctx.fillText(`TYPE: ${node.type}`, x + 28, y - 10);
+  ctx.fillText(`STATUS: ${node.status}`, x + 28, y + 6);
+  ctx.fillText(`ACTION: CLICK TO HACK`, x + 28, y + 26);
 
   ctx.restore();
-}
-
-/* ===============================
-   SIMULATED EVENTS (ctOS)
-================================ */
-let eventTimer = 0;
-
-function updateEvents(dt) {
-  eventTimer += dt;
-
-  if (eventTimer > 6 && nodes.length > 0) {
-    const node = nodes[Math.floor(Math.random() * nodes.length)];
-
-    if (node.status === "normal") node.status = "alert";
-    else if (node.status === "alert") node.status = "compromised";
-    else node.status = "normal";
-
-    eventTimer = 0;
-  }
 }
 
 /* ===============================
@@ -139,7 +163,7 @@ function render(time) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   hoveredNode = null;
 
-  updateEvents(dt);
+  updateRareEvents(dt);
 
   links.forEach(link => link.draw(ctx, map, time));
 
