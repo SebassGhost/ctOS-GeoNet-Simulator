@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ctos-core",
+    "lat": 40.7128,
+    "lng": -74.0060,
+    "type": "ctos",
+    "status": "normal"
+  },
+  {
+    "id": "traffic-cam-01",
+    "lat": 40.7212,
+    "lng": -74.0048,
+    "type": "camera",
+    "status": "normal"
+  },
+  {
+    "id": "phone-8791",
+    "lat": 40.7095,
+    "lng": -74.0121,
+    "type": "mobile",
+    "status": "unstable"
+  },
+  {
+    "id": "atm-332",
+    "lat": 40.7159,
+    "lng": -74.0012,
+    "type": "iot",
+    "status": "alert"
+  },
+  {
+    "id": "router-77A",
+    "lat": 40.7184,
+    "lng": -74.0097,
+    "type": "network",
+    "status": "normal"
+  }
+]
