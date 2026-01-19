@@ -1,1 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>ctOS GeoNet Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    /* Reset básico */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0b0f14;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* Contenedor principal */
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Mapa Leaflet */
+    #map {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Canvas ctOS */
+    #ctos-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none; /* deja pasar eventos al mapa */
+    }
+
+    /* Marca visual opcional */
+    .watermark {
+      position: absolute;
+      bottom: 12px;
+      right: 16px;
+      color: rgba(0, 255, 204, 0.5);
+      font-size: 12px;
+      z-index: 3;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="map"></div>
+    <canvas id="ctos-canvas"></canvas>
+    <div class="watermark">ctOS GeoNet Simulator</div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Scripts del proyecto (vacíos por ahora) -->
+  <!--
+  <script src="src/map/map.js"></script>
+  <script src="src/canvas/overlay.js"></script>
+  <script src="src/systems/NetworkSystem.js"></script>
+  -->
+
+  <script>
+    /* === MAPA BASE (temporal, luego va a src/map/map.js) === */
+
+    const map = L.map("map", {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([40.7128, -74.0060], 11); // New York por ahora
+
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      {
+        maxZoom: 19
+      }
+    ).addTo(map);
+
+    /* === CANVAS BASE === */
+    const canvas = document.getElementById("ctos-canvas");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    /* Placeholder visual (solo para confirmar que funciona) */
+    ctx.strokeStyle = "rgba(0,255,204,0.6)";
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, 40, 0, Math.PI * 2);
+    ctx.stroke();
+  </script>
+</body>
+</html>
 
